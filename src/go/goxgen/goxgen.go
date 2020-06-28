@@ -1,0 +1,3 @@
+package goxgen
+
+func Goxgen() {}

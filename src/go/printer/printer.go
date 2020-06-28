@@ -1276,6 +1276,7 @@ const (
 	TabIndent                  // use tabs for indentation independent of UseSpaces
 	UseSpaces                  // use spaces instead of tabs for alignment
 	SourcePos                  // emit //line directives to preserve original source positions
+	GoxToGo                    // transform gox to Go
 )
 
 // A Config node controls the output of Fprint.
@@ -1283,6 +1284,8 @@ type Config struct {
 	Mode     Mode // default: 0
 	Tabwidth int  // default: 8
 	Indent   int  // default: 0 (all code is indented at least by this much)
+
+	GoxTargetPackage string
 }
 
 // fprint implements Fprint and takes a nodesSizes map for setting up the printer state.

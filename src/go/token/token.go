@@ -125,6 +125,13 @@ const (
 	TYPE
 	VAR
 	keyword_end
+
+	// gox tokens
+	OTAG            // <div
+	OTAG_END        // >
+	OTAG_SELF_CLOSE // />
+	CTAG            // </div>
+	BARE_WORDS      // This is inside a tag
 )
 
 var tokens = [...]string{
@@ -225,6 +232,13 @@ var tokens = [...]string{
 	SWITCH: "switch",
 	TYPE:   "type",
 	VAR:    "var",
+
+	// gox tokens
+	OTAG:            "OTAG",
+	OTAG_END:        "OTAG_END",
+	OTAG_SELF_CLOSE: "OTAG_SELF_CLOSE",
+	CTAG:            "CTAG",
+	BARE_WORDS:      "BARE_WORDS",
 }
 
 // String returns the string corresponding to the token tok.

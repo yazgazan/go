@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"go/ast"
 	"go/token"
+	"html"
 	"math"
 	"strconv"
 	"strings"
@@ -966,6 +967,51 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 		p.print(blank)
 		p.expr(x.Value)
 
+	case *ast.GoxExpr:
+		if p.Mode&GoxToGo != 0 {
+			p.expr(goxToVecty(p.Config.GoxTargetPackage, x))
+		} else {
+			// print the gox version instead
+			p.print("<")
+			p.expr(x.TagName)
+			// Print expressions
+			for _, v := range x.Attrs {
+				p.print(blank)
+				p.stmt(v, false)
+			}
+			p.print(">")
+			for _, v := range x.X {
+				p.expr(v)
+			}
+			p.expr(x.Ctag)
+		}
+
+	case *ast.GoExpr:
+		if p.Mode&GoxToGo != 0 {
+			p.expr(x.X)
+		} else {
+			p.print(token.LBRACE)
+			p.expr(x.X)
+			p.print(token.RBRACE)
+		}
+
+	case *ast.CtagExpr:
+		if p.Mode&GoxToGo != 0 {
+			panic("unreachable")
+		} else {
+			p.print(x.Value) // value already contains the </ and > (it's a "hack")
+		}
+
+	case *ast.BareWordsExpr:
+		if p.Mode&GoxToGo != 0 {
+			// unescape the bare words &nbsp;s and stuff
+			// and then convert it to a go string
+			safe := strconv.Quote(html.UnescapeString(x.Value))
+			p.print(safe)
+		} else {
+			p.print(x.Value) // they're already bare
+		}
+
 	default:
 		panic("unreachable")
 	}
@@ -1346,6 +1392,17 @@ func (p *printer) stmt(stmt ast.Stmt, nextIsRBrace bool) {
 		p.expr(stripParens(s.X))
 		p.print(blank)
 		p.block(s.Body, 1)
+
+	case *ast.GoxAttrStmt:
+		if p.Mode&GoxToGo != 0 {
+			// TODO(eric)
+		} else {
+			p.expr(s.Lhs)
+			if s.Rhs != nil {
+				p.print(token.ASSIGN)
+				p.expr(s.Rhs)
+			}
+		}
 
 	default:
 		panic("unreachable")
