@@ -44,6 +44,10 @@ type Scanner struct {
 	lineOffset int  // current line offset
 	insertSemi bool // insert a semicolon before next newline
 
+	// Additional scanning state for gox
+	lastToken token.Token
+	goxState  goxStack
+
 	// public state - ok to modify
 	ErrorCount int // number of errors encountered
 }
@@ -136,6 +140,9 @@ func (s *Scanner) Init(file *token.File, src []byte, err ErrorHandler, mode Mode
 	s.lineOffset = 0
 	s.insertSemi = false
 	s.ErrorCount = 0
+
+	s.lastToken = token.ILLEGAL
+	s.goxState.push(GO)
 
 	s.next()
 	if s.ch == bom {
@@ -779,7 +786,7 @@ func (s *Scanner) switch4(tok0, tok1 token.Token, ch2 rune, tok2, tok3 token.Tok
 // set with Init. Token positions are relative to that file
 // and thus relative to the file set.
 //
-func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
+func (s *Scanner) scanGoMode() (pos token.Pos, tok token.Token, lit string) {
 scanAgain:
 	s.skipWhitespace()
 
@@ -848,20 +855,39 @@ scanAgain:
 			tok = token.SEMICOLON
 			lit = ";"
 		case '(':
+			s.goxState.braceDepth++
 			tok = token.LPAREN
 		case ')':
 			insertSemi = true
 			tok = token.RPAREN
+			// Check to see if our depth is negative
+			s.goxState.braceDepth--
+			if s.goxState.braceDepth < 0 {
+				err := s.goxState.pop()
+				if err != nil {
+					s.error(s.offset, err.Error())
+				}
+			}
 		case '[':
 			tok = token.LBRACK
 		case ']':
 			insertSemi = true
 			tok = token.RBRACK
 		case '{':
+			// increment brace depth
+			s.goxState.braceDepth++
 			tok = token.LBRACE
 		case '}':
 			insertSemi = true
 			tok = token.RBRACE
+			// Check to see if our depth is negative
+			s.goxState.braceDepth--
+			if s.goxState.braceDepth < 0 {
+				err := s.goxState.pop()
+				if err != nil {
+					s.error(s.offset, err.Error())
+				}
+			}
 		case '+':
 			tok = s.switch3(token.ADD, token.ADD_ASSIGN, '+', token.INC)
 			if tok == token.INC {
@@ -904,6 +930,11 @@ scanAgain:
 			if s.ch == '-' {
 				s.next()
 				tok = token.ARROW
+			} else if isLetter(s.ch) && goxLegal(s.lastToken) {
+				tok = token.OTAG
+
+				// Push GOX_TAG mode onto the stack
+				s.goxState.push(GOX_TAG)
 			} else {
 				tok = s.switch4(token.LSS, token.LEQ, '<', token.SHL, token.SHL_ASSIGN)
 			}
@@ -932,6 +963,9 @@ scanAgain:
 			lit = string(ch)
 		}
 	}
+
+	// Save the last token for gox
+	s.lastToken = tok
 	if s.mode&dontInsertSemis == 0 {
 		s.insertSemi = insertSemi
 	}

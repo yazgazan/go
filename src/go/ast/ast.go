@@ -993,6 +993,7 @@ type File struct {
 	Imports    []*ImportSpec   // imports in this file
 	Unresolved []*Ident        // unresolved identifiers in this file
 	Comments   []*CommentGroup // list of all comments in the source file
+	Tokens     *token.File
 }
 
 func (f *File) Pos() token.Pos { return f.Package }

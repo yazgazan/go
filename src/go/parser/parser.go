@@ -1054,6 +1054,10 @@ func (p *parser) tryIdentOrType() ast.Expr {
 		typ := p.parseType()
 		rparen := p.expect(token.RPAREN)
 		return &ast.ParenExpr{Lparen: lparen, X: typ, Rparen: rparen}
+	case token.OTAG:
+		return p.parseGoxTag()
+	case token.BARE_WORDS:
+		return p.parseBareWords()
 	}
 
 	// no type found
@@ -1383,6 +1387,8 @@ func (p *parser) checkExpr(x ast.Expr) ast.Expr {
 	case *ast.CompositeLit:
 	case *ast.ParenExpr:
 		panic("unreachable")
+	case *ast.GoxExpr:
+	case *ast.BareWordsExpr:
 	case *ast.SelectorExpr:
 	case *ast.IndexExpr:
 	case *ast.SliceExpr:
@@ -2587,5 +2593,6 @@ func (p *parser) parseFile() *ast.File {
 		Imports:    p.imports,
 		Unresolved: p.unresolved[0:i],
 		Comments:   p.comments,
+		Tokens:     p.file,
 	}
 }
