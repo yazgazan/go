@@ -91,8 +91,18 @@ func goxToVecty(genname string, gox *ast.GoxExpr) ast.Expr {
 		args = append(args, markup)
 	}
 
+	args = append(args, xToArgs(genname, gox.X)...)
+
+	return newCallExpr(
+		newSelectorExpr(genname, "Tag"),
+		args,
+	)
+}
+
+func xToArgs(genname string, x []ast.Expr) []ast.Expr {
+	args := make([]ast.Expr, len(x))
 	// Add the contents
-	for _, expr := range gox.X {
+	for i, expr := range x {
 		switch expr := expr.(type) {
 		// TODO figure out what's a better thing to do here
 		// do we want to error on compile or figure out what to do based on context?
@@ -113,22 +123,19 @@ func goxToVecty(genname string, gox *ast.GoxExpr) ast.Expr {
 				newSelectorExpr(genname, "Text"),
 				[]ast.Expr{expr},
 			)
-			args = append(args, e)
+			args[i] = e
 		case *ast.GoExpr:
 			e := newCallExpr(
 				newSelectorExpr(genname, "Value"),
 				[]ast.Expr{expr},
 			)
-			args = append(args, e)
+			args[i] = e
 		default:
-			args = append(args, expr)
+			args[i] = expr
 		}
 	}
 
-	return newCallExpr(
-		newSelectorExpr(genname, "Tag"),
-		args,
-	)
+	return args
 }
 
 func newSelectorExpr(x, sel string) *ast.SelectorExpr {
@@ -172,14 +179,8 @@ func newComponentStruct(genname string, gox *ast.GoxExpr) ast.Expr {
 			Key:   ast.NewIdent("Body"),
 			Colon: token.NoPos,
 			Value: newCallExpr(
-				newSelectorExpr(genname, "Text"),
-				append([]ast.Expr{
-					&ast.BasicLit{
-						ValuePos: token.NoPos,
-						Value:    `""`,
-						Kind:     token.STRING,
-					},
-				}, gox.X...),
+				newSelectorExpr(genname, "Writers"),
+				xToArgs(genname, gox.X),
 			),
 		}
 
@@ -235,14 +236,8 @@ func newComponentCall(genname string, gox *ast.GoxExpr) ast.Expr {
 
 	if len(gox.X) != 0 {
 		expr := newCallExpr(
-			newSelectorExpr(genname, "Text"),
-			append([]ast.Expr{
-				&ast.BasicLit{
-					ValuePos: token.NoPos,
-					Value:    `""`,
-					Kind:     token.STRING,
-				},
-			}, gox.X...),
+			newSelectorExpr(genname, "Writers"),
+			xToArgs(genname, gox.X),
 		)
 
 		args = append(args, expr)
