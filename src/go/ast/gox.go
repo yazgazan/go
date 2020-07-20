@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"fmt"
 	"go/token"
 	"unicode"
 )
@@ -71,4 +72,8 @@ func IsGoxComponent(expr Expr) bool {
 	case *Ident:
 		return unicode.IsUpper(rune(t.Name[0]))
 	}
+}
+
+func GoxName(expr Expr) string {
+	return fmt.Sprint(expr)
 }

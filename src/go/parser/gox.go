@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 )
@@ -15,8 +16,16 @@ func (p *parser) parseGoxTag() ast.Expr {
 	tagName := p.checkExpr(p.parseRhs())
 
 	attrs := []*ast.GoxAttrStmt{}
-	for p.tok != token.OTAG_END && p.tok != token.OTAG_SELF_CLOSE {
-		attrs = append(attrs, p.parseGoxAttr())
+	for p.tok != token.OTAG_END && p.tok != token.OTAG_SELF_CLOSE && p.tok != token.EOF {
+		attr := p.parseGoxAttr()
+		if attr == nil {
+			return nil
+		}
+		attrs = append(attrs, attr)
+	}
+	if p.tok == token.EOF {
+		p.error(p.pos, "Unexpected EOF")
+		return nil
 	}
 	// if a self closing tag, close
 	if p.tok == token.OTAG_SELF_CLOSE {
@@ -47,7 +56,9 @@ func (p *parser) parseGoxTag() ast.Expr {
 			content = append(content, p.parseGoxTag())
 		default:
 			p.error(p.pos, "Unexpected token in gox tag")
-			return nil
+			p.exprLev--
+			p.next()
+			return &ast.BadExpr{From: p.pos, To: p.pos + 1}
 		}
 	}
 
@@ -56,6 +67,13 @@ func (p *parser) parseGoxTag() ast.Expr {
 	ctag := &ast.CtagExpr{Close: ctagpos, Value: lit}
 
 	p.exprLev--
+
+	if ast.GoxName(tagName) != lit {
+		p.error(ctagpos, fmt.Sprintf("tag %q not closed", tagName))
+		p.next()
+		panic(fmt.Sprintf("tag %q not closed", tagName))
+		return &ast.BadExpr{From: ctagpos, To: ctagpos + 1}
+	}
 
 	return &ast.GoxExpr{Otag: otag, TagName: tagName, Attrs: attrs, X: content, Ctag: ctag}
 }
@@ -78,6 +96,7 @@ func (p *parser) parseGoxAttr() *ast.GoxAttrStmt {
 		rhs = p.parseRhs() // yeaaaah
 	default:
 		p.error(p.pos, "Encountered illegal attribute value in gox tag")
+		return nil
 	}
 
 	return &ast.GoxAttrStmt{Lhs: lhs, Rhs: rhs}

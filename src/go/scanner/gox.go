@@ -61,7 +61,7 @@ func (s *Scanner) scanCTag() string {
 		}
 	}
 
-	return string(s.src[offs:s.offset])
+	return string(s.src[offs+2 : s.offset-1])
 }
 
 func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {

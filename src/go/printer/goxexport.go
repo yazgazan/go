@@ -65,6 +65,7 @@ var attrMap = map[string]string{
 	"src":         "src",
 	"type":        "type",
 	"value":       "value",
+	"httpEquiv":   "http-equiv",
 }
 
 func goxToVecty(genname string, gox *ast.GoxExpr) ast.Expr {
