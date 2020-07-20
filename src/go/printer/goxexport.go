@@ -74,11 +74,19 @@ func goxToVecty(genname string, gox *ast.GoxExpr) ast.Expr {
 		return newComponent(genname, gox)
 	}
 
-	args := []ast.Expr{
-		&ast.BasicLit{
-			Kind:  token.STRING,
-			Value: strconv.Quote(gox.TagName.(*ast.Ident).Name),
-		}}
+	tagName := gox.TagName.(*ast.Ident).Name
+	tagFn := "Tag"
+
+	var args []ast.Expr
+	if tagName == "text" {
+		tagFn = "PlainText"
+	} else {
+		args = []ast.Expr{
+			&ast.BasicLit{
+				Kind:  token.STRING,
+				Value: strconv.Quote(tagName),
+			}}
+	}
 
 	if len(gox.Attrs) > 0 {
 		// Create markup expr and add attributes
@@ -94,7 +102,7 @@ func goxToVecty(genname string, gox *ast.GoxExpr) ast.Expr {
 	args = append(args, xToArgs(genname, gox.X)...)
 
 	return newCallExpr(
-		newSelectorExpr(genname, "Tag"),
+		newSelectorExpr(genname, tagFn),
 		args,
 	)
 }
